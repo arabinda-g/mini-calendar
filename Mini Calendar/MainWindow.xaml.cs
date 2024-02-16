@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -25,31 +26,30 @@ namespace Mini_Calendar
         public MainWindow()
         {
             InitializeComponent();
+            LoadEventsFromSettings();
             PopulateMonthYear();
+            ApplyInitialTheme();
             GenerateMonthView(DateTime.Now);
+        }
 
-            // Load events from settings
+        private void LoadEventsFromSettings()
+        {
             var existingEventsJson = Properties.Settings.Default.Events ?? "[]";
             events = JsonConvert.DeserializeObject<List<CalendarEvent>>(existingEventsJson) ?? new List<CalendarEvent>();
+        }
 
-            // Load the selected theme from settings
+        private void ApplyInitialTheme()
+        {
             var themeName = Properties.Settings.Default.Theme ?? "LightTheme";
             ApplyTheme(themeName);
+            UpdateThemeMenuCheckState(themeName);
+        }
 
-            // Checkboxes for theme selection
-            var theme = Properties.Settings.Default.Theme;
-            if (theme == "LightTheme")
-            {
-                menuLightTheme.IsChecked = true;
-            }
-            else if (theme == "DarkTheme")
-            {
-                menuDarkTheme.IsChecked = true;
-            }
-            else
-            {
-                menuSystemTheme.IsChecked = true;
-            }
+        private void UpdateThemeMenuCheckState(string themeName)
+        {
+            menuLightTheme.IsChecked = themeName == "LightTheme";
+            menuDarkTheme.IsChecked = themeName == "DarkTheme";
+            menuSystemTheme.IsChecked = themeName == "SystemTheme"; // Adjust if using a dynamic system theme detection
         }
 
         private void PopulateMonthYear()
@@ -75,34 +75,65 @@ namespace Mini_Calendar
             GenerateMonthView(date);
         }
 
+
         private void GenerateMonthView(DateTime date)
         {
             calendarGrid.Children.Clear();
             calendarGrid.RowDefinitions.Clear();
             calendarGrid.ColumnDefinitions.Clear();
 
-            // Add an extra row for the header
-            calendarGrid.RowDefinitions.Add(new RowDefinition());
+            SetupDayOfWeekHeaders();
 
-            // Set up columns for days of the week
+            int daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
+            DateTime firstDayOfMonth = new DateTime(date.Year, date.Month, 1);
+            int startDayOfWeek = (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+            int dayOffset = (int)firstDayOfMonth.DayOfWeek - startDayOfWeek;
+            dayOffset = dayOffset < 0 ? dayOffset + 7 : dayOffset; // Ensure positive offset
+
+            int totalCells = daysInMonth + dayOffset;
+            int rows = totalCells / 7 + (totalCells % 7 == 0 ? 0 : 1);
+
+            for (int i = 0; i < rows; i++)
+            {
+                calendarGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            }
+
             for (int i = 0; i < 7; i++)
             {
-                calendarGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                var dayName = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[i];
-                var header = new TextBlock
+                calendarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            }
+
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                DateTime currentDay = new DateTime(date.Year, date.Month, day);
+                int column = (dayOffset + day - 1) % 7;
+                int row = (dayOffset + day - 1) / 7 + 1; // +1 to account for header row
+
+                AddDayToGrid(currentDay, column, row);
+            }
+        }
+
+        private void SetupDayOfWeekHeaders()
+        {
+            // Add headers to the grid similar to how days are added in GenerateMonthView, but just for the first row
+
+            // Add the day of week headers
+            for (int i = 0; i < 7; i++)
+            {
+                TextBlock dayOfWeekBlock = new TextBlock
                 {
-                    Text = dayName,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
+                    Text = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[i],
                     FontWeight = FontWeights.Bold,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 };
 
                 // Apply theme dynamically to TextBlock
-                header.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
+                dayOfWeekBlock.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
 
-                Grid.SetRow(header, 0);
-                Grid.SetColumn(header, i);
-                calendarGrid.Children.Add(header);
+                Grid.SetRow(dayOfWeekBlock, 0);
+                Grid.SetColumn(dayOfWeekBlock, i);
+                calendarGrid.Children.Add(dayOfWeekBlock);
             }
 
             // Set up columns for days of the week
@@ -111,91 +142,62 @@ namespace Mini_Calendar
                 calendarGrid.ColumnDefinitions.Add(new ColumnDefinition());
             }
 
-            var daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
-            var firstDayOfMonth = new DateTime(date.Year, date.Month, 1);
-            var startDayOfWeek = (int)firstDayOfMonth.DayOfWeek;
-
-            // Adjust start day for cultures where week starts with Sunday
-            int adjustedStartDay = startDayOfWeek == 0 ? 6 : startDayOfWeek - 1;
-
-            // Calculate the number of rows needed
-            int rows = (adjustedStartDay + daysInMonth) / 7;
-            rows += (adjustedStartDay + daysInMonth) % 7 > 0 ? 1 : 0;
-
-            // Set up rows
-            for (int i = 0; i < rows; i++)
+            // Set up rows for the days of the month
+            for (int i = 0; i < 6; i++)
             {
                 calendarGrid.RowDefinitions.Add(new RowDefinition());
             }
+        }
 
-            // Populate the grid with day numbers and names
-            for (int day = 1, col = adjustedStartDay, row = 1; day <= daysInMonth; day++, col++) // Start from row 1 to skip header
+        private void AddDayToGrid(DateTime day, int column, int row)
+        {
+            var dayEvents = events.Where(e => e.Date.Date == day.Date).ToList();
+
+            StackPanel stackPanel = new StackPanel();
+            TextBlock dayBlock = new TextBlock
             {
-                if (col > 6)
-                {
-                    col = 0;
-                    row++;
-                }
+                Text = day.Day.ToString(),
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
 
-                // Correctly calculate the day of the week name based on the column index
-                var dayOfWeekName = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[col % 7];
-                var dayBlock = new TextBlock
+            // Apply theme dynamically to TextBlock
+            dayBlock.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
+
+            stackPanel.Children.Add(dayBlock);
+
+            foreach (var eventData in dayEvents)
+            {
+                TextBlock eventBlock = new TextBlock
                 {
-                    Text = $"{dayOfWeekName}\n{day}",
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    TextAlignment = TextAlignment.Center
+                    Text = eventData.Title,
+                    Foreground = new SolidColorBrush(Colors.White),
+                    Background = new SolidColorBrush(Colors.DarkBlue),
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(2)
                 };
 
                 // Apply theme dynamically to TextBlock
-                dayBlock.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
+                eventBlock.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
 
-                var border = new Border
-                {
-                    BorderBrush = Brushes.Black,
-                    BorderThickness = new Thickness(1),
-                    Child = dayBlock
-                };
-
-                // Apply theme dynamically to Border
-                border.SetResourceReference(Border.BorderBrushProperty, "PrimaryBorderBrush");
-                border.SetResourceReference(Border.BackgroundProperty, "PrimaryBackground");
-
-                Grid.SetRow(border, row);
-                Grid.SetColumn(border, col);
-                calendarGrid.Children.Add(border);
+                stackPanel.Children.Add(eventBlock);
             }
 
-
-
-            // When setting up each day cell in the grid:
-            foreach (var day in Enumerable.Range(1, daysInMonth))
+            Border border = new Border
             {
-                var currentDay = new DateTime(date.Year, date.Month, day);
-                var dayEvents = events.Where(e => e.Date.Date == currentDay.Date).ToList();
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(1),
+                Child = stackPanel
+            };
 
-                var stackPanel = new StackPanel();
-                // Add day label to stackPanel as before
-                foreach (var eventData in dayEvents)
-                {
-                    var eventBlock = new TextBlock
-                    {
-                        Text = eventData.Title,
-                        FontWeight = FontWeights.Bold,
-                        Foreground = Brushes.White,
-                        Background = Brushes.DarkBlue,
-                        TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(2)
-                    };
-                    stackPanel.Children.Add(eventBlock);
-                }
+            // Apply theme dynamically to Border
+            border.SetResourceReference(Border.BorderBrushProperty, "PrimaryBorderBrush");
+            border.SetResourceReference(Border.BackgroundProperty, "PrimaryBackground");
 
-                // Add stackPanel to the calendar grid as before
-                Grid.SetRow(stackPanel, currentDay.Day + adjustedStartDay);
-                Grid.SetColumn(stackPanel, (int)currentDay.DayOfWeek);
-                calendarGrid.Children.Add(stackPanel);
-            }
-
+            Grid.SetRow(border, row);
+            Grid.SetColumn(border, column);
+            calendarGrid.Children.Add(border);
         }
 
         private void AddEvent_Click(object sender, RoutedEventArgs e)

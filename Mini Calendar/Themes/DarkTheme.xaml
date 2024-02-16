@@ -3,5 +3,5 @@
 	<!-- Define dark theme resources -->
 	<SolidColorBrush x:Key="PrimaryBackground" Color="Black"/>
 	<SolidColorBrush x:Key="PrimaryForeground" Color="White"/>
-	<SolidColorBrush x:Key="PrimaryBorderBrush" Color="White"/>
+	<SolidColorBrush x:Key="PrimaryBorderBrush" Color="LightGray"/>
 </ResourceDictionary>

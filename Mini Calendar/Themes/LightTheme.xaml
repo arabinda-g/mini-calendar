@@ -3,5 +3,5 @@
 	<!-- Define light theme resources -->
 	<SolidColorBrush x:Key="PrimaryBackground" Color="White"/>
 	<SolidColorBrush x:Key="PrimaryForeground" Color="Black"/>
-	<SolidColorBrush x:Key="PrimaryBorderBrush" Color="Black"/>
+	<SolidColorBrush x:Key="PrimaryBorderBrush" Color="Gray"/>
 </ResourceDictionary>
