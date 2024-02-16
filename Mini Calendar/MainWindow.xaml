@@ -5,8 +5,42 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Mini_Calendar"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-
-    </Grid>
+        Title="Mini Calendar" Height="450" Width="800" WindowState="Maximized">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="File">
+                <MenuItem Header="Export to iCal" Click="ExportToIcal_Click"/>
+            </MenuItem>
+            <MenuItem Header="Theme">
+                <MenuItem Header="Light" Click="LightTheme_Click"/>
+                <MenuItem Header="Dark" Click="DarkTheme_Click"/>
+                <MenuItem Header="System" Click="SystemTheme_Click"/>
+            </MenuItem>
+            <MenuItem Header="Add Event" Click="AddEvent_Click"/>
+        </Menu>
+        <StatusBar DockPanel.Dock="Bottom" Name="statusBar"/>
+        
+        <!-- Calendar and event display area -->
+        <ScrollViewer DockPanel.Dock="Top">
+            <ItemsControl x:Name="calendarDisplay" ItemsSource="{Binding}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Template for displaying a day and its events -->
+                        <Border BorderThickness="1" BorderBrush="Gray" Margin="5">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Date, StringFormat='dd'}" FontWeight="Bold" />
+                                <ItemsControl ItemsSource="{Binding Events}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Title}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
 </Window>
