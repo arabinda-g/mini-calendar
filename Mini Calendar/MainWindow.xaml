@@ -21,7 +21,9 @@
             </MenuItem>
             <MenuItem Header="Add Event" Click="AddEvent_Click"/>
         </Menu>
-        <StatusBar DockPanel.Dock="Bottom" Name="statusBar"/>
+        <StatusBar DockPanel.Dock="Bottom" Background="{DynamicResource PrimaryBackground}">
+            <StatusBarItem x:Name="statusMessage" Foreground="{DynamicResource PrimaryForeground}"/>
+        </StatusBar>
 
         <!-- Navigation Controls -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">

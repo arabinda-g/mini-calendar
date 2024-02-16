@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace Mini_Calendar
 {
@@ -22,20 +23,44 @@ namespace Mini_Calendar
     public partial class MainWindow : Window
     {
         private List<CalendarEvent> events = new List<CalendarEvent>();
+        private DispatcherTimer statusTimer;
 
         public MainWindow()
         {
             InitializeComponent();
+            InitializeStatusTimer();
             LoadEventsFromSettings();
             PopulateMonthYear();
             ApplyInitialTheme();
             GenerateMonthView(DateTime.Now);
+
+            // Show a status message to indicate the app is ready
+            ShowStatusMessage("Ready");
         }
 
         private void LoadEventsFromSettings()
         {
             var existingEventsJson = Properties.Settings.Default.Events ?? "[]";
             events = JsonConvert.DeserializeObject<List<CalendarEvent>>(existingEventsJson) ?? new List<CalendarEvent>();
+        }
+
+        private void InitializeStatusTimer()
+        {
+            statusTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            statusTimer.Tick += (sender, e) =>
+            {
+                statusMessage.Content = string.Empty; // Clear the status message
+                statusTimer.Stop(); // Stop the timer
+            };
+        }
+
+        private void ShowStatusMessage(string message)
+        {
+            statusMessage.Content = message; // Set the status message
+            statusTimer.Start(); // Start the timer to clear the message after 2 seconds
         }
 
         private void ApplyInitialTheme()
@@ -208,6 +233,7 @@ namespace Mini_Calendar
                 var newEvent = dialog.NewEvent;
                 SaveEvent(newEvent);
                 //MessageBox.Show($"Added: {newEvent.Title} on {newEvent.Date.ToShortDateString()}");
+                ShowStatusMessage("Event added successfully.");
             }
         }
 
