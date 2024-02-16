@@ -17,19 +17,29 @@ namespace Mini_Calendar
     /// <summary>
     /// Interaction logic for AddEventDialog.xaml
     /// </summary>
-    public partial class AddEventDialog : Window
+    public partial class AddEditEventDialog : Window
     {
-        public CalendarEvent NewEvent { get; private set; }
+        public CalendarEvent eventData { get; private set; } = new CalendarEvent();
 
-        public AddEventDialog()
+        public AddEditEventDialog(CalendarEvent? existingEvent = null)
         {
             InitializeComponent();
+
+            // If an existing event was passed in, populate the dialog's fields with the event's data
+            if (existingEvent != null)
+            {
+                titleTextBox.Text = existingEvent.Title;
+                datePicker.SelectedDate = existingEvent.Date;
+                descriptionTextBox.Text = existingEvent.Description;
+                btnSaveEvent.Content = "Save";
+                Title = "Edit Event";
+            }
         }
 
-        private void AddEvent_Click(object sender, RoutedEventArgs e)
+        private void SaveEvent_Click(object sender, RoutedEventArgs e)
         {
             // Create a new event with the dialog's input data
-            NewEvent = new CalendarEvent
+            eventData = new CalendarEvent
             {
                 Title = titleTextBox.Text,
                 Date = datePicker.SelectedDate ?? DateTime.Now,

@@ -186,19 +186,61 @@ namespace Mini_Calendar
 
             foreach (var eventData in dayEvents)
             {
-                TextBlock eventBlock = new TextBlock
+                // Container for event text and icons
+                StackPanel eventContainer = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Stretch // Ensure it stretches to fill the space
+                };
+
+                // Ensure the container takes the full width
+                Grid.SetColumnSpan(eventContainer, calendarGrid.ColumnDefinitions.Count);
+
+                // Event text
+                TextBlock eventText = new TextBlock
                 {
                     Text = eventData.Title,
                     Foreground = new SolidColorBrush(Colors.White),
                     Background = new SolidColorBrush(Colors.DarkBlue),
                     TextWrapping = TextWrapping.Wrap,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
                     Margin = new Thickness(2)
                 };
 
-                // Apply theme dynamically to TextBlock
-                eventBlock.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
+                // Edit button
+                Button editButton = new Button
+                {
+                    Content = "\u270E", // Pencil icon in Unicode, replace with your icon
+                    FontSize = 12,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Background = Brushes.Transparent,
+                    BorderThickness = new Thickness(0),
+                    Tag = eventData.Id
+                };
 
-                stackPanel.Children.Add(eventBlock);
+                editButton.Click += EventButton_Click;
+
+                // Delete button
+                Button deleteButton = new Button
+                {
+                    //Content = "\u1F5D1", // Trash bin icon in Unicode, replace with your icon
+                    Content = "X",
+                    FontSize = 12,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Background = Brushes.Transparent,
+                    BorderThickness = new Thickness(0),
+                    Tag = eventData.Id
+                };
+                deleteButton.Click += EventDeleteButton_Click; // Implement this method
+
+                // Add elements to the container
+                eventContainer.Children.Add(eventText);
+                eventContainer.Children.Add(editButton);
+                eventContainer.Children.Add(deleteButton);
+
+                // Finally, add the event container to your stackPanel or grid
+                stackPanel.Children.Add(eventContainer);
             }
 
             Border border = new Border
@@ -219,21 +261,22 @@ namespace Mini_Calendar
 
         private void AddEvent_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new AddEventDialog();
+            var dialog = new AddEditEventDialog();
             if (dialog.ShowDialog() == true)
             {
-                var newEvent = dialog.NewEvent;
-                SaveEvent(newEvent);
+                var newEvent = dialog.eventData;
+
+                // Add the new event
+                events.Add(newEvent);
+                SaveEvents();
+
                 //MessageBox.Show($"Added: {newEvent.Title} on {newEvent.Date.ToShortDateString()}");
                 ShowStatusMessage("Event added successfully.");
             }
         }
 
-        private void SaveEvent(CalendarEvent calendarEvent)
+        private void SaveEvents()
         {
-            // Add the new event
-            events.Add(calendarEvent);
-
             // Save the updated events list back to settings
             var updatedEventsJson = JsonConvert.SerializeObject(events);
             Properties.Settings.Default.Events = updatedEventsJson;
@@ -350,6 +393,49 @@ namespace Mini_Calendar
             // Save the selected theme to settings
             Properties.Settings.Default.Theme = themeName;
             Properties.Settings.Default.Save();
+        }
+
+        private void EventButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button != null && button.Tag is Guid eventId)
+            {
+                var eventToEdit = events.FirstOrDefault(ev => ev.Id == eventId);
+                if (eventToEdit != null)
+                {
+                    var editDialog = new AddEditEventDialog(eventToEdit); // Assume this constructor or method sets up the dialog for editing
+                    if (editDialog.ShowDialog() == true)
+                    {
+                        var updatedEvent = editDialog.eventData;
+
+                        // Update event details
+                        eventToEdit.Title = updatedEvent.Title; // Adjust these property names as necessary
+                        eventToEdit.Date = updatedEvent.Date;
+                        eventToEdit.Description = updatedEvent.Description;
+
+                        // Save updated events
+                        SaveEvents();
+                        GenerateMonthView(DateTime.Now);
+                        ShowStatusMessage("Event updated successfully.");
+                    }
+                }
+            }
+        }
+
+        private void EventDeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Are you sure you want to delete this event?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result == MessageBoxResult.Yes)
+            {
+                var button = sender as Button;
+                if (button != null && button.Tag is Guid eventId)
+                {
+                    events.RemoveAll(ev => ev.Id == eventId);
+                    SaveEvents(); // Save the updated list to settings
+                    GenerateMonthView(DateTime.Now); // Refresh the calendar view
+                    ShowStatusMessage("Event deleted successfully.");
+                }
+            }
         }
     }
 
