@@ -31,6 +31,25 @@ namespace Mini_Calendar
             // Load events from settings
             var existingEventsJson = Properties.Settings.Default.Events ?? "[]";
             events = JsonConvert.DeserializeObject<List<CalendarEvent>>(existingEventsJson) ?? new List<CalendarEvent>();
+
+            // Load the selected theme from settings
+            var themeName = Properties.Settings.Default.Theme ?? "LightTheme";
+            ApplyTheme(themeName);
+
+            // Checkboxes for theme selection
+            var theme = Properties.Settings.Default.Theme;
+            if (theme == "LightTheme")
+            {
+                menuLightTheme.IsChecked = true;
+            }
+            else if (theme == "DarkTheme")
+            {
+                menuDarkTheme.IsChecked = true;
+            }
+            else
+            {
+                menuSystemTheme.IsChecked = true;
+            }
         }
 
         private void PopulateMonthYear()
@@ -75,8 +94,12 @@ namespace Mini_Calendar
                     Text = dayName,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
-                    FontWeight = FontWeights.Bold
+                    FontWeight = FontWeights.Bold,
                 };
+
+                // Apply theme dynamically to TextBlock
+                header.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
+
                 Grid.SetRow(header, 0);
                 Grid.SetColumn(header, i);
                 calendarGrid.Children.Add(header);
@@ -124,12 +147,19 @@ namespace Mini_Calendar
                     TextAlignment = TextAlignment.Center
                 };
 
+                // Apply theme dynamically to TextBlock
+                dayBlock.SetResourceReference(TextBlock.ForegroundProperty, "PrimaryForeground");
+
                 var border = new Border
                 {
                     BorderBrush = Brushes.Black,
                     BorderThickness = new Thickness(1),
                     Child = dayBlock
                 };
+
+                // Apply theme dynamically to Border
+                border.SetResourceReference(Border.BorderBrushProperty, "PrimaryBorderBrush");
+                border.SetResourceReference(Border.BackgroundProperty, "PrimaryBackground");
 
                 Grid.SetRow(border, row);
                 Grid.SetColumn(border, col);
@@ -259,11 +289,19 @@ namespace Mini_Calendar
         private void LightTheme_Click(object sender, RoutedEventArgs e)
         {
             ApplyTheme("LightTheme");
+            menuLightTheme.IsChecked = true;
+
+            // Uncheck other theme options
+            menuDarkTheme.IsChecked = false;
+            menuSystemTheme.IsChecked = false;
         }
 
         private void DarkTheme_Click(object sender, RoutedEventArgs e)
         {
             ApplyTheme("DarkTheme");
+            menuDarkTheme.IsChecked = true;
+            menuSystemTheme.IsChecked = false;
+            menuLightTheme.IsChecked = false;
         }
 
         private void SystemTheme_Click(object sender, RoutedEventArgs e)
@@ -274,6 +312,9 @@ namespace Mini_Calendar
                               false; // Placeholder for actual system theme check
 
             ApplyTheme(isDarkTheme ? "DarkTheme" : "LightTheme");
+            menuSystemTheme.IsChecked = true;
+            menuLightTheme.IsChecked = false;
+            menuDarkTheme.IsChecked = false;
         }
 
         private void ApplyTheme(string themeName)
@@ -285,6 +326,10 @@ namespace Mini_Calendar
             var themeUri = $"Themes/{themeName}.xaml"; // Assuming themes are in a Themes folder
             var themeResourceDictionary = new ResourceDictionary { Source = new Uri(themeUri, UriKind.Relative) };
             Application.Current.Resources.MergedDictionaries.Add(themeResourceDictionary);
+
+            // Save the selected theme to settings
+            Properties.Settings.Default.Theme = themeName;
+            Properties.Settings.Default.Save();
         }
     }
 

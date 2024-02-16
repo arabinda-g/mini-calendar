@@ -9,15 +9,15 @@
     <Window.Resources>
         <!-- If you have window-specific resources -->
     </Window.Resources>
-    <DockPanel>
+    <DockPanel Background="{DynamicResource PrimaryBackground}">
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
                 <MenuItem Header="Export to iCal" Click="ExportToIcal_Click"/>
             </MenuItem>
             <MenuItem Header="Theme">
-                <MenuItem Header="Light" Click="LightTheme_Click"/>
-                <MenuItem Header="Dark" Click="DarkTheme_Click"/>
-                <MenuItem Header="System" Click="SystemTheme_Click"/>
+                <MenuItem x:Name="menuLightTheme" Header="Light" Click="LightTheme_Click"/>
+                <MenuItem x:Name="menuDarkTheme" Header="Dark" Click="DarkTheme_Click"/>
+                <MenuItem x:Name="menuSystemTheme" Header="System" Click="SystemTheme_Click"/>
             </MenuItem>
             <MenuItem Header="Add Event" Click="AddEvent_Click"/>
         </Menu>

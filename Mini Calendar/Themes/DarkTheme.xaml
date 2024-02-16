@@ -1,7 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Define dark theme resources -->
-    <SolidColorBrush x:Key="PrimaryBackground" Color="Black"/>
-    <SolidColorBrush x:Key="PrimaryForeground" Color="White"/>
-    <!-- Add more resources as needed -->
+	<!-- Define dark theme resources -->
+	<SolidColorBrush x:Key="PrimaryBackground" Color="Black"/>
+	<SolidColorBrush x:Key="PrimaryForeground" Color="White"/>
+	<SolidColorBrush x:Key="PrimaryBorderBrush" Color="White"/>
 </ResourceDictionary>
