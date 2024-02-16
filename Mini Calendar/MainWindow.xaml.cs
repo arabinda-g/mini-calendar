@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System;
+using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -21,21 +23,113 @@ namespace Mini_Calendar
         public MainWindow()
         {
             InitializeComponent();
-            PopulateCalendar(DateTime.Now);
+            PopulateMonthYear();
+            GenerateMonthView(DateTime.Now);
         }
 
-        private void PopulateCalendar(DateTime date)
+        private void PopulateMonthYear()
         {
-            var daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
-            var days = new List<CalendarDayViewModel>();
+            monthComboBox.ItemsSource = CultureInfo.CurrentCulture.DateTimeFormat.MonthNames.Take(12);
+            monthComboBox.SelectedIndex = DateTime.Now.Month - 1;
 
-            for (int day = 1; day <= daysInMonth; day++)
+            var currentYear = DateTime.Now.Year;
+            for (int year = currentYear - 10; year <= currentYear + 10; year++)
             {
-                var dayDate = new DateTime(date.Year, date.Month, day);
-                days.Add(new CalendarDayViewModel { Date = dayDate });
+                yearComboBox.Items.Add(year);
+            }
+            yearComboBox.SelectedItem = currentYear;
+        }
+
+        private void MonthYearChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (monthComboBox.SelectedIndex < 0 || yearComboBox.SelectedItem == null) return;
+
+            var year = (int)yearComboBox.SelectedItem;
+            var month = monthComboBox.SelectedIndex + 1;
+            var date = new DateTime(year, month, 1);
+            GenerateMonthView(date);
+        }
+
+        private void GenerateMonthView(DateTime date)
+        {
+            calendarGrid.Children.Clear();
+            calendarGrid.RowDefinitions.Clear();
+            calendarGrid.ColumnDefinitions.Clear();
+
+            // Add an extra row for the header
+            calendarGrid.RowDefinitions.Add(new RowDefinition());
+
+            // Set up columns for days of the week
+            for (int i = 0; i < 7; i++)
+            {
+                calendarGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                var dayName = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[i];
+                var header = new TextBlock
+                {
+                    Text = dayName,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontWeight = FontWeights.Bold
+                };
+                Grid.SetRow(header, 0);
+                Grid.SetColumn(header, i);
+                calendarGrid.Children.Add(header);
             }
 
-            calendarDisplay.ItemsSource = days;
+            // Set up columns for days of the week
+            for (int i = 0; i < 7; i++)
+            {
+                calendarGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            }
+
+            var daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
+            var firstDayOfMonth = new DateTime(date.Year, date.Month, 1);
+            var startDayOfWeek = (int)firstDayOfMonth.DayOfWeek;
+
+            // Adjust start day for cultures where week starts with Sunday
+            int adjustedStartDay = startDayOfWeek == 0 ? 6 : startDayOfWeek - 1;
+
+            // Calculate the number of rows needed
+            int rows = (adjustedStartDay + daysInMonth) / 7;
+            rows += (adjustedStartDay + daysInMonth) % 7 > 0 ? 1 : 0;
+
+            // Set up rows
+            for (int i = 0; i < rows; i++)
+            {
+                calendarGrid.RowDefinitions.Add(new RowDefinition());
+            }
+
+            // Populate the grid with day numbers and names
+            for (int day = 1, col = adjustedStartDay, row = 1; day <= daysInMonth; day++, col++) // Start from row 1 to skip header
+            {
+                if (col > 6)
+                {
+                    col = 0;
+                    row++;
+                }
+
+                // Correctly calculate the day of the week name based on the column index
+                var dayOfWeekName = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[col % 7];
+                var dayBlock = new TextBlock
+                {
+                    Text = $"{dayOfWeekName}\n{day}",
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextAlignment = TextAlignment.Center
+                };
+
+                var border = new Border
+                {
+                    BorderBrush = Brushes.Black,
+                    BorderThickness = new Thickness(1),
+                    Child = dayBlock
+                };
+
+                Grid.SetRow(border, row);
+                Grid.SetColumn(border, col);
+                calendarGrid.Children.Add(border);
+            }
+
         }
 
         private void AddEvent_Click(object sender, RoutedEventArgs e)

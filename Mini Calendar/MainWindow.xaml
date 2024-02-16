@@ -19,28 +19,16 @@
             <MenuItem Header="Add Event" Click="AddEvent_Click"/>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom" Name="statusBar"/>
+
+        <!-- Navigation Controls -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+            <ComboBox x:Name="monthComboBox" Width="100" SelectionChanged="MonthYearChanged"/>
+            <ComboBox x:Name="yearComboBox" Width="100" Margin="5,0" SelectionChanged="MonthYearChanged"/>
+        </StackPanel>
         
         <!-- Calendar and event display area -->
-        <ScrollViewer DockPanel.Dock="Top">
-            <ItemsControl x:Name="calendarDisplay" ItemsSource="{Binding}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <!-- Template for displaying a day and its events -->
-                        <Border BorderThickness="1" BorderBrush="Gray" Margin="5">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Date, StringFormat='dd'}" FontWeight="Bold" />
-                                <ItemsControl ItemsSource="{Binding Events}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Title}" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <Grid x:Name="calendarGrid" Margin="10">
+            <!-- Dynamically added rows and columns representing days and weeks -->
+        </Grid>
     </DockPanel>
 </Window>
