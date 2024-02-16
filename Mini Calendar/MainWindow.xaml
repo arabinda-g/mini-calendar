@@ -6,6 +6,9 @@
         xmlns:local="clr-namespace:Mini_Calendar"
         mc:Ignorable="d"
         Title="Mini Calendar" Height="450" Width="800" WindowState="Maximized">
+    <Window.Resources>
+        <!-- If you have window-specific resources -->
+    </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
@@ -27,7 +30,7 @@
         </StackPanel>
         
         <!-- Calendar and event display area -->
-        <Grid x:Name="calendarGrid" Margin="10">
+        <Grid x:Name="calendarGrid" Margin="10" Background="{DynamicResource PrimaryBackground}">
             <!-- Dynamically added rows and columns representing days and weeks -->
         </Grid>
     </DockPanel>

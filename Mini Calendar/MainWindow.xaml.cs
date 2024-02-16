@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,6 +27,10 @@ namespace Mini_Calendar
             InitializeComponent();
             PopulateMonthYear();
             GenerateMonthView(DateTime.Now);
+
+            // Load events from settings
+            var existingEventsJson = Properties.Settings.Default.Events ?? "[]";
+            events = JsonConvert.DeserializeObject<List<CalendarEvent>>(existingEventsJson) ?? new List<CalendarEvent>();
         }
 
         private void PopulateMonthYear()
@@ -130,6 +136,36 @@ namespace Mini_Calendar
                 calendarGrid.Children.Add(border);
             }
 
+
+
+            // When setting up each day cell in the grid:
+            foreach (var day in Enumerable.Range(1, daysInMonth))
+            {
+                var currentDay = new DateTime(date.Year, date.Month, day);
+                var dayEvents = events.Where(e => e.Date.Date == currentDay.Date).ToList();
+
+                var stackPanel = new StackPanel();
+                // Add day label to stackPanel as before
+                foreach (var eventData in dayEvents)
+                {
+                    var eventBlock = new TextBlock
+                    {
+                        Text = eventData.Title,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = Brushes.White,
+                        Background = Brushes.DarkBlue,
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(2)
+                    };
+                    stackPanel.Children.Add(eventBlock);
+                }
+
+                // Add stackPanel to the calendar grid as before
+                Grid.SetRow(stackPanel, currentDay.Day + adjustedStartDay);
+                Grid.SetColumn(stackPanel, (int)currentDay.DayOfWeek);
+                calendarGrid.Children.Add(stackPanel);
+            }
+
         }
 
         private void AddEvent_Click(object sender, RoutedEventArgs e)
@@ -138,30 +174,123 @@ namespace Mini_Calendar
             if (dialog.ShowDialog() == true)
             {
                 var newEvent = dialog.NewEvent;
-                MessageBox.Show($"Added: {newEvent.Title} on {newEvent.Date.ToShortDateString()}");
+                SaveEvent(newEvent);
+                //MessageBox.Show($"Added: {newEvent.Title} on {newEvent.Date.ToShortDateString()}");
             }
         }
 
+        private void SaveEvent(CalendarEvent calendarEvent)
+        {
+            // Add the new event
+            events.Add(calendarEvent);
+
+            // Save the updated events list back to settings
+            var updatedEventsJson = JsonConvert.SerializeObject(events);
+            Properties.Settings.Default.Events = updatedEventsJson;
+            Properties.Settings.Default.Save();
+
+            // Refresh the calendar to display the new event
+            GenerateMonthView(DateTime.Now);
+        }
+
+        private List<CalendarEvent> GetAllEvents()
+        {
+            var eventsJson = Properties.Settings.Default.Events ?? "[]";
+            return JsonConvert.DeserializeObject<List<CalendarEvent>>(eventsJson) ?? new List<CalendarEvent>();
+        }
 
         private void ExportToIcal_Click(object sender, RoutedEventArgs e)
         {
+            var events = GetAllEvents();
+            StringBuilder icalBuilder = new StringBuilder();
+
+            // Begin Calendar
+            icalBuilder.AppendLine("BEGIN:VCALENDAR");
+            icalBuilder.AppendLine("VERSION:2.0");
+            icalBuilder.AppendLine("PRODID:-//Your Company//Your Product//EN");
+
+            foreach (var calendarEvent in events)
+            {
+                // Begin Event
+                icalBuilder.AppendLine("BEGIN:VEVENT");
+
+                // Unique identifier for the event
+                icalBuilder.AppendLine($"UID:{calendarEvent.Id}@yourdomain.com");
+
+                // Event start and end times in UTC
+                icalBuilder.AppendLine($"DTSTAMP:{DateTime.UtcNow:yyyyMMddTHHmmssZ}");
+                icalBuilder.AppendLine($"DTSTART:{calendarEvent.Date.ToUniversalTime():yyyyMMddTHHmmssZ}");
+                // Assuming the event duration is 1 hour for simplicity
+                icalBuilder.AppendLine($"DTEND:{calendarEvent.Date.AddHours(1).ToUniversalTime():yyyyMMddTHHmmssZ}");
+
+                // Event summary
+                icalBuilder.AppendLine($"SUMMARY:{calendarEvent.Title}");
+
+                // Event description
+                icalBuilder.AppendLine($"DESCRIPTION:{calendarEvent.Description}");
+
+                // End Event
+                icalBuilder.AppendLine("END:VEVENT");
+            }
+
+            // End Calendar
+            icalBuilder.AppendLine("END:VCALENDAR");
+
+            // Save the iCal data to a file
+            SaveIcalToFile(icalBuilder.ToString());
+        }
+
+        private void SaveIcalToFile(string icalData)
+        {
+            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "iCalendar files (*.ics)|*.ics|All files (*.*)|*.*",
+                DefaultExt = ".ics",
+                FileName = "events"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                File.WriteAllText(saveFileDialog.FileName, icalData);
+                MessageBox.Show("Events exported successfully.", "Export to iCal", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
         private void LightTheme_Click(object sender, RoutedEventArgs e)
         {
+            ApplyTheme("LightTheme");
         }
 
         private void DarkTheme_Click(object sender, RoutedEventArgs e)
         {
+            ApplyTheme("DarkTheme");
         }
 
         private void SystemTheme_Click(object sender, RoutedEventArgs e)
         {
+            // Determine if the system is using a light or dark theme
+            var isDarkTheme = SystemParameters.HighContrast || // Fallback check for high contrast mode
+                                                               // Check for Windows theme setting (Registry, System Theme APIs, etc.)
+                              false; // Placeholder for actual system theme check
+
+            ApplyTheme(isDarkTheme ? "DarkTheme" : "LightTheme");
+        }
+
+        private void ApplyTheme(string themeName)
+        {
+            // Clear existing resources
+            Application.Current.Resources.MergedDictionaries.Clear();
+
+            // Load and apply the new theme
+            var themeUri = $"Themes/{themeName}.xaml"; // Assuming themes are in a Themes folder
+            var themeResourceDictionary = new ResourceDictionary { Source = new Uri(themeUri, UriKind.Relative) };
+            Application.Current.Resources.MergedDictionaries.Add(themeResourceDictionary);
         }
     }
 
     public class CalendarEvent
     {
+        public Guid Id { get; set; } = Guid.NewGuid();
         public string Title { get; set; }
         public DateTime Date { get; set; }
         public string Description { get; set; }
